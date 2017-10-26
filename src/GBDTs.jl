@@ -1,3 +1,8 @@
+"""
+    GBDTs
+
+Grammar-Based Decision Tree (GBDT) is a machine learning model that can be used for the interpretable classification and categorization of heterogeneous multivariate time series data.
+"""
 module GBDTs
 
 export 

@@ -4,6 +4,11 @@ Grammar-based decision tree (GBDT) is an interpretable machine learning model th
 
 [1] Lee et al. "Interpretable Categorization of Heterogeneous Time Series Data", preprint, 2018.
 
+## Main Dependencies
+
+* sisl/ExprOptimization.jl
+* sisl/MultivariateTimeSeries.jl
+
 ## Usage
 
 Please see the [example notebook](http://nbviewer.ipython.org/github/sisl/GBDTs.jl/blob/master/examples/Auslan.ipynb).
