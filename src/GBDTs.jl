@@ -10,6 +10,7 @@ export
         GBDT,
         induce_tree, 
         partition,
+        members_by_bool,
         classify,
         node_members,
         id,
@@ -20,7 +21,6 @@ export
         gini,
         gini_loss
 
-using DataFrames
 using Discretizers
 using Reexport
 using StatsBase
@@ -212,7 +212,7 @@ Returns a Boolean vector of length members containing the results of evaluating 
 function partition{T}(X::AbstractVector{T}, members::AbstractVector{Int}, expr, eval_module::Module)
     y_bool = Vector{Bool}(length(members))
     for i in eachindex(members)
-        @eval eval_module x = $(X[members[i]]::SubDataFrame)
+        @eval eval_module x = $(X[members[i]])
         y_bool[i] = eval(eval_module, expr) #use x in expression
     end
     y_bool
@@ -248,6 +248,12 @@ function gini{T}(v::AbstractVector{T})
 end
 
 """
+    Base.length(model::GBDT)
+
+Returns the number of vertices in the GBDT. 
+"""
+Base.length(model::GBDT) = length(model.tree)
+"""
     Base.length(root::GBDTNode)
 
 Returns the number of vertices in the tree rooted at root.
@@ -259,6 +265,9 @@ function Base.length(root::GBDTNode)
     end
     return retval
 end
+
+Base.show(io::IO, model::GBDT) = Base.show(io::IO, model.tree)
+Base.show(io::IO, tree::GBDTNode) = print_tree(io, tree)
 
 """
     Base.display(model::GBDT; edgelabels::Bool=false)
@@ -310,7 +319,7 @@ end
 
 Predict classification label of each member using GBDT model.  Evaluate expressions in eval_module.
 """
-function classify{T}(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}, 
+function classify{T}(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
                      eval_module::Module=Main)
     classify(model.tree, X, members, eval_module; catdisc=model.catdisc)
 end
@@ -320,11 +329,12 @@ end
 
 Predict classification label of each member using GBDT tree.  Evaluate expressions in eval_module.  If catdisc is available, use discretizer to decode labels.
 """
-function classify{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, eval_module::Module=Main;
+function classify{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
+                     eval_module::Module=Main; 
                      catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}())
     y_pred = Vector{Int}(length(members))
     for i in eachindex(members)
-        @eval eval_module x=$(X[i]::SubDataFrame)
+        @eval eval_module x=$(X[i])
         y_pred[i] = _classify(node, eval_module) 
     end
     if isnull(catdisc)

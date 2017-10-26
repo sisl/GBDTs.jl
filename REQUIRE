@@ -3,6 +3,5 @@ Reexport
 TikzGraphs
 LightGraphs
 StatsBase
-DataFrames
 Discretizers
 AbstractTrees
