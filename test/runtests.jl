@@ -1,7 +1,6 @@
 using GBDTs
 using Base.Test
 
-
 let
     X = [true, true, true, false, false] 
     y = [x ? 1 : 2 for x in X]
