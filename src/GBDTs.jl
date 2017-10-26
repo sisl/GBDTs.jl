@@ -213,6 +213,10 @@ function _classify(node::GBDTNode, eval_module::Module)
     return _classify(ch, eval_module) 
 end
 
+function node_members{T}(result::GBDTResult, X::AbstractVector{T}, members::AbstractVector{Int}, 
+                      eval_module::Module=Main)
+    node_members(result.tree, X, members, eval_module)
+end
 function node_members{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, 
                       eval_module::Module=Main)
     mvec = Vector{Vector{Int}}(length(node))
