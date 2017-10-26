@@ -1,6 +1,8 @@
-# GBDTs.jl
+# GBDTs.jl -- Grammar-Based Decision Trees
 
-Base functions for generating and optimizing Julia expressions from a grammar.
+Grammar-based decision tree (GBDT) is an interpretable machine learning model that can be used for the classification and categorization of heterogeneous multivariate time series data. GBDTs combine decision trees with a grammar framework. Each split of the decision tree is governed by a logical expression derived from a user-supplied grammar. The flexibility of the grammar framework enables GBDTs to be applied to a wide range of problems. In particular, GBDT has been previously applied to analyze multivariate heterogeneous time series data of failures in aircraft collision avoidance systems [1].
+
+[1] Lee et al. "Interpretable Categorization of Heterogeneous Time Series Data", preprint, 2018.
 
 ## Usage
 
