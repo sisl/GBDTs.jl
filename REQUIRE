@@ -1,6 +1,6 @@
 julia 0.6
 Reexport
-TikzGraphs
+TikzGraphs 0.5.1
 LightGraphs
 StatsBase
 Discretizers
