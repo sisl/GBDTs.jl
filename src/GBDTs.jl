@@ -125,7 +125,7 @@ function gini_loss{T}(node::RuleNode, grammar::Grammar, X::AbstractVector{T}, y_
 end
 
 """
-    induce_tree{XT,YT}(grammar::Grammar, typ::Symbol, p::ExprOptParams, X::AbstractVector{XT}, 
+    induce_tree{XT,YT}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{XT}, 
                         y::AbstractVector{YT}, max_depth::Int, loss::Function=gini_loss,
                         eval_module::Module=Main)
 
@@ -133,14 +133,14 @@ Learn a GBDT from labeled data.  Categorical labels are converted to integers.
 # Arguments:
 - `grammar::Grammar`: grammar
 - `typ::Symbol`: start symbol
-- `p::ExprOptParams`: Parameters for ExprOptimization algorithm
+- `p::ExprOptAlgorithm`: Parameters for ExprOptimization algorithm
 - `X::AbstractVector{XT}`: Input data features, e.g., a MultivariateTimeSeries
 - `y::AbstractVector{YT}`: Input (class) labels.
 - `max_depth::Int`: Maximum depth of GBDT.
 - `loss::Function`: Loss function.  See gini_loss() for function signature.
 - `eval_module::Module`: Module in which expressions are evaluated.
 """
-function induce_tree{XT,YT}(grammar::Grammar, typ::Symbol, p::ExprOptParams, X::AbstractVector{XT}, 
+function induce_tree{XT,YT}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{XT}, 
                         y::AbstractVector{YT}, max_depth::Int, loss::Function=gini_loss,
                         eval_module::Module=Main; kwargs...)
     catdisc = CategoricalDiscretizer(y)
@@ -149,7 +149,7 @@ function induce_tree{XT,YT}(grammar::Grammar, typ::Symbol, p::ExprOptParams, X::
                 catdisc=Nullable{CategoricalDiscretizer}(catdisc), kwargs...)
 end
 """
-    induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptParams, X::AbstractVector{T}, 
+    induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{T}, 
                         y_truth::AbstractVector{Int}, max_depth::Int, loss::Function=gini_loss,
                         eval_module::Module=Main; 
                         catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}(),
@@ -159,7 +159,7 @@ Learn a GBDT from labeled data.
 # Arguments:
 - `grammar::Grammar`: grammar
 - `typ::Symbol`: start symbol
-- `p::ExprOptParams`: Parameters for ExprOptimization algorithm
+- `p::ExprOptAlgorithm`: Parameters for ExprOptimization algorithm
 - `X::AbstractVector{XT}`: Input data features, e.g., a MultivariateTimeSeries
 - `y_truth::AbstractVector{Int}`: Input (class) labels.
 - `max_depth::Int`: Maximum depth of GBDT.
@@ -168,7 +168,7 @@ Learn a GBDT from labeled data.
 - `catdisc::Nullable{CategoricalDiscretizer}`: Discretizer used for converting the labels.
 - `verbose::Bool`: Verbose outputs
 """
-function induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptParams, X::AbstractVector{T}, 
+function induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{T}, 
                         y_truth::AbstractVector{Int}, max_depth::Int, loss::Function=gini_loss,
                         eval_module::Module=Main; 
                         catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}(),
@@ -180,7 +180,7 @@ function induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptParams, X::Abst
     node = _split(node_count, grammar, typ, p, X, y_truth, members, max_depth, loss, eval_module)
     return GBDT(node, catdisc)
 end
-function _split{T}(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOptParams, 
+function _split{T}(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, 
                        X::AbstractVector{T}, y_truth::AbstractVector{Int}, members::AbstractVector{Int}, 
                        d::Int, loss::Function, eval_module::Module)
     id = node_count.i += 1  #assign ids in preorder

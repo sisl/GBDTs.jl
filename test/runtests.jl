@@ -10,7 +10,7 @@ let
     end
 
     srand(0)
-    p = MonteCarloParams(10,5)
+    p = MonteCarlo(10,5)
     members = collect(1:length(X))
     model = induce_tree(grammar, :b, p, X, y, 2)
     @test length(model) == 3
