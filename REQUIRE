@@ -5,3 +5,5 @@ LightGraphs
 StatsBase
 Discretizers
 AbstractTrees
+ExprRules
+ExprOptimization
