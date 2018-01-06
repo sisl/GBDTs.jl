@@ -166,23 +166,30 @@ Learn a GBDT from labeled data.
 - `loss::Function`: Loss function.  See gini_loss() for function signature.
 - `eval_module::Module`: Module in which expressions are evaluated.
 - `catdisc::Nullable{CategoricalDiscretizer}`: Discretizer used for converting the labels.
+- `min_members_per_branch::Int`: Minimum number of members for a valid branch.
+- `allow_same_label::Bool`: Allow two branches to have the same dominant label 
 - `verbose::Bool`: Verbose outputs
 """
 function induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{T}, 
                         y_truth::AbstractVector{Int}, max_depth::Int, loss::Function=gini_loss,
                         eval_module::Module=Main; 
                         catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}(),
+                        min_members_per_branch::Int=0,
+                        allow_same_label::Bool=false,
                         verbose::Bool=false)
     verbose && println("Starting...")
     @assert length(X) == length(y_truth)
     members = collect(1:length(y_truth))
     node_count = Counter(0)
-    node = _split(node_count, grammar, typ, p, X, y_truth, members, max_depth, loss, eval_module)
+    node = _split(node_count, grammar, typ, p, X, y_truth, members, max_depth, loss, eval_module,
+                 min_members_per_branch=min_members_per_branch, allow_same_label=allow_same_label)
     return GBDT(node, catdisc)
 end
 function _split{T}(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, 
                        X::AbstractVector{T}, y_truth::AbstractVector{Int}, members::AbstractVector{Int}, 
-                       d::Int, loss::Function, eval_module::Module)
+                       d::Int, loss::Function, eval_module::Module;
+                       min_members_per_branch::Int=0,
+                       allow_same_label::Bool=false)
     id = node_count.i += 1  #assign ids in preorder
     if d == 0 || ishomogeneous(y_truth[members])
         return GBDTNode(id, mode(y_truth[members]))
@@ -193,8 +200,13 @@ function _split{T}(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOp
     y_bool = partition(X, members, gbes_result.expr, eval_module)
     members_true, members_false = members_by_bool(members, y_bool)
 
-    #don't create split if search was unsuccessful
-    if isempty(members_true) || isempty(members_false)
+    #don't create split if split doesn't result in two valid groups 
+    if length(members_true) <= min_members_per_branch || length(members_false) <= min_members_per_branch
+        return GBDTNode(id, mode(y_truth[members]))
+    end
+
+    #don't create split if both sides of the split have the same dominant label
+    if allow_same_label && (mode(y_truth[members_true]) == mode(y_truth[members_false]))
         return GBDTNode(id, mode(y_truth[members]))
     end
 
