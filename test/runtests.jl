@@ -1,7 +1,7 @@
 using GBDTs
 using Base.Test
 
-#let
+let
     X = [true, true, true, false, false] 
     y = [x ? 1 : 2 for x in X]
 
@@ -31,4 +31,8 @@ using Base.Test
     @test mvec[1] == members
     @test mvec[2] == members_true
     @test mvec[3] == members_false
-#end
+    @test model.tree == model[1]
+    @test children_id(model.tree) == [2,3]
+    @test get_expr(nothing) == nothing
+    @test get_expr(model[1]) == :x
+end

@@ -379,10 +379,10 @@ function node_members{T}(model::GBDT, X::AbstractVector{T}, members::AbstractVec
     node_members(model.tree, X, members, eval_module)
 end
 """
-    node_members{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, 
-                      eval_module::Module=Main)
+    node_members{t}(node::gbdtnode, x::abstractvector{t}, members::abstractvector{int}, 
+                      eval_module::module=main)
 
-Returns the members of each node in the tree.
+returns the members of each node in the tree.
 """
 function node_members{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, 
                       eval_module::Module=Main)
@@ -402,14 +402,36 @@ function _node_members!{T}(mvec::Vector{Vector{Int}}, node::GBDTNode, X::Abstrac
     _node_members!(mvec, node.children[2], X, members_false, eval_module)
 end
 
-function children_id(model::GBDT, id::Int)
+"""
+    Base.getindex(model::GBDT, id::Int)
+
+returns node with id 
+"""
+function Base.getindex(model::GBDT, id::Int)
     for node in PreOrderDFS(model.tree)
         if node.id == id
-            return children_id(node)
+            return node 
         end
     end
-    Int[]
+    error("node id not found")
 end
+
+"""
+    children_id(node::GBDTNode) 
+
+returns a vector that contains the node ids of the children of node
+"""
 children_id(node::GBDTNode) = Int[c.id for c in children(node)]
+
+"""
+   get_expr(node::GBDTNode)
+
+returns the expression of the node 
+"""
+function ExprOptimization.get_expr(node::GBDTNode)
+    result = get(node.gbes_result, nothing)
+    get_expr(result)
+end
+ExprOptimization.get_expr(x::Void) = nothing
 
 end # module
