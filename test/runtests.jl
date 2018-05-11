@@ -1,7 +1,7 @@
 using GBDTs
 using Base.Test
 
-let
+#let
     X = [true, true, true, false, false] 
     y = [x ? 1 : 2 for x in X]
 
@@ -31,4 +31,4 @@ let
     @test mvec[1] == members
     @test mvec[2] == members_true
     @test mvec[3] == members_false
-end
+#end
