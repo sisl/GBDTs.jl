@@ -1,5 +1,5 @@
 using GBDTs
-using Base.Test
+using Random,Test
 
 let
     X = [true, true, true, false, false] 
@@ -9,7 +9,7 @@ let
         b = x | true | false
     end
 
-    srand(0)
+    Random.seed!(0)
     p = MonteCarlo(10,5)
     members = collect(1:length(X))
     model = induce_tree(grammar, :b, p, X, y, 2)
@@ -23,8 +23,8 @@ let
     y_bool = partition(X, members, :x, Main)
     @test X == y_bool
     members_true, members_false = members_by_bool(members, y_bool) 
-    @test members_true == find(X) 
-    @test members_false == find(!, X) 
+    @test members_true == findall(X) 
+    @test members_false == findall(!, X) 
     y_pred = classify(model, X)
     @test y_pred == y
     mvec = node_members(model, X, members)

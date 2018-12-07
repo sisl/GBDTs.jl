@@ -38,11 +38,11 @@ Node object of a GBDT.
 struct GBDTNode
     id::Int
     label::Int
-    gbes_result::Nullable{ExprOptResult}
+    gbes_result::Union{Nothing,ExprOptResult}
     children::Vector{GBDTNode}
 end
 function GBDTNode(id::Int, label::Int) 
-    GBDTNode(id, label, Nullable{ExprOptResult}(), GBDTNode[])
+    GBDTNode(id, label, nothing, GBDTNode[])
 end
 
 """
@@ -52,7 +52,7 @@ GBDT model produced by induce_tree.
 """
 struct GBDT
     tree::GBDTNode
-    catdisc::Nullable{CategoricalDiscretizer}
+    catdisc::Union{Nothing,CategoricalDiscretizer}
 end
 
 """
@@ -93,32 +93,32 @@ isleaf(node::GBDTNode) = isempty(node.children)
 AbstractTrees.children(node::GBDTNode) = node.children
 function AbstractTrees.printnode(io::IO, node::GBDTNode) 
     print(io, "$(node.id): label=$(node.label)")
-    if !isnull(node.gbes_result)
+    if node.gbes_result != nothing
         r = get(node.gbes_result)
         print(io, ", loss=$(round(r.loss,2)), $(r.expr)")
     end
 end
 
 """
-    ishomogeneous{T}(v::AbstractVector{T}) 
+    ishomogeneous(v::AbstractVector{T}) where T
 
 Returns true if all elements in v are the same.
 """
-ishomogeneous{T}(v::AbstractVector{T}) = length(unique(v)) == 1
+ishomogeneous(v::AbstractVector{T}) where T = length(unique(v)) == 1
 
 """
-    gini_loss{T}(node::RuleNode, grammar::Grammar, X::AbstractVector{T}, y_truth::AbstractVector{Int}, 
+    gini_loss(node::RuleNode, grammar::Grammar, X::AbstractVector{T}, y_truth::AbstractVector{Int}, 
                      members::AbstractVector{Int}, eval_module::Module; 
                      w1::Float64=100.0, 
-                     w2::Float64=0.1)
+                     w2::Float64=0.1) where T
 
 Default loss function based on gini impurity and number of nodes in the derivation tree.  
 See Lee et al. "Interpretable categorization of heterogeneous time series data"
 """
-function gini_loss{T}(node::RuleNode, grammar::Grammar, X::AbstractVector{T}, y_truth::AbstractVector{Int}, 
+function gini_loss(node::RuleNode, grammar::Grammar, X::AbstractVector{T}, y_truth::AbstractVector{Int}, 
                      members::AbstractVector{Int}, eval_module::Module; 
                      w1::Float64=100.0, 
-                     w2::Float64=0.1)
+                     w2::Float64=0.1) where T
     ex = get_executable(node, grammar)
     y_bool = partition(X, members, ex, eval_module)
     members_true, members_false = members_by_bool(members, y_bool)
@@ -126,9 +126,9 @@ function gini_loss{T}(node::RuleNode, grammar::Grammar, X::AbstractVector{T}, y_
 end
 
 """
-    induce_tree{XT,YT}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{XT}, 
+    induce_tree(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{XT}, 
                         y::AbstractVector{YT}, max_depth::Int, loss::Function=gini_loss,
-                        eval_module::Module=Main)
+                        eval_module::Module=Main) where {XT,YT}
 
 Learn a GBDT from labeled data.  Categorical labels are converted to integers.
 # Arguments:
@@ -141,20 +141,20 @@ Learn a GBDT from labeled data.  Categorical labels are converted to integers.
 - `loss::Function`: Loss function.  See gini_loss() for function signature.
 - `eval_module::Module`: Module in which expressions are evaluated.
 """
-function induce_tree{XT,YT}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{XT}, 
+function induce_tree(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{XT}, 
                         y::AbstractVector{YT}, max_depth::Int, loss::Function=gini_loss,
-                        eval_module::Module=Main; kwargs...)
+                        eval_module::Module=Main; kwargs...) where {XT,YT}
     catdisc = CategoricalDiscretizer(y)
     y_truth = encode(catdisc, y)
     induce_tree(grammar, typ, p, X, y_truth, max_depth, loss, eval_module; 
-                catdisc=Nullable{CategoricalDiscretizer}(catdisc), kwargs...)
+                catdisc=(catdisc), kwargs...)
 end
 """
-    induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{T}, 
+    induce_tree(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{T}, 
                         y_truth::AbstractVector{Int}, max_depth::Int, loss::Function=gini_loss,
                         eval_module::Module=Main; 
-                        catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}(),
-                        verbose::Bool=false)
+                        catdisc::Union{Nothing,CategoricalDiscretizer}=nothing),
+                        verbose::Bool=false) where T
 
 Learn a GBDT from labeled data.  
 # Arguments:
@@ -166,18 +166,18 @@ Learn a GBDT from labeled data.
 - `max_depth::Int`: Maximum depth of GBDT.
 - `loss::Function`: Loss function.  See gini_loss() for function signature.
 - `eval_module::Module`: Module in which expressions are evaluated.
-- `catdisc::Nullable{CategoricalDiscretizer}`: Discretizer used for converting the labels.
+- `catdisc::Union{Nothing,CategoricalDiscretizer}`: Discretizer used for converting the labels.
 - `min_members_per_branch::Int`: Minimum number of members for a valid branch.
 - `prevent_same_label::Bool`: Prevent split if both branches have the same dominant label 
 - `verbose::Bool`: Verbose outputs
 """
-function induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{T}, 
+function induce_tree(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::AbstractVector{T}, 
                         y_truth::AbstractVector{Int}, max_depth::Int, loss::Function=gini_loss,
                         eval_module::Module=Main; 
-                        catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}(),
+                        catdisc::Union{Nothing,CategoricalDiscretizer}=nothing,
                         min_members_per_branch::Int=0,
                         prevent_same_label::Bool=true,
-                        verbose::Bool=false)
+                        verbose::Bool=false) where T
     verbose && println("Starting...")
     @assert length(X) == length(y_truth)
     members = collect(1:length(y_truth))
@@ -186,11 +186,11 @@ function induce_tree{T}(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::A
                  min_members_per_branch=min_members_per_branch, prevent_same_label=prevent_same_label)
     return GBDT(node, catdisc)
 end
-function _split{T}(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, 
+function _split(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, 
                        X::AbstractVector{T}, y_truth::AbstractVector{Int}, members::AbstractVector{Int}, 
                        d::Int, loss::Function, eval_module::Module;
                        min_members_per_branch::Int=0,
-                       prevent_same_label::Bool=true)
+                       prevent_same_label::Bool=true) where T
     id = node_count.i += 1  #assign ids in preorder
     if d == 0 || ishomogeneous(y_truth[members])
         return GBDTNode(id, mode(y_truth[members]))
@@ -222,15 +222,15 @@ function _split{T}(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOp
 end
 
 """
-    partition{T}(X::AbstractVector{T}, members::AbstractVector{Int}, expr, eval_module::Module)
+    partition(X::AbstractVector{T}, members::AbstractVector{Int}, expr, eval_module::Module) where T
 
 Returns a Boolean vector of length members containing the results of evaluating expr on each member.  Expressions are evaluated in eval_module.
 """
-function partition{T}(X::AbstractVector{T}, members::AbstractVector{Int}, expr, eval_module::Module)
-    y_bool = Vector{Bool}(length(members))
+function partition(X::AbstractVector{T}, members::AbstractVector{Int}, expr, eval_module::Module) where T
+    y_bool = Vector{Bool}(undef, length(members))
     for i in eachindex(members)
         @eval eval_module x = $(X[members[i]])
-        y_bool[i] = eval(eval_module, expr) #use x in expression
+        y_bool[i] = Core.eval(eval_module, expr) #use x in expression
     end
     y_bool
 end
@@ -242,24 +242,24 @@ Returns a tuple containing the results of splitting members by the Boolean value
 """
 function members_by_bool(members::AbstractVector{Int}, y_bool::AbstractVector{Bool})
     @assert length(y_bool) == length(members)
-    return members[find(y_bool)], members[find(!,y_bool)]
+    return members[findall(y_bool)], members[findall(!,y_bool)]
 end
 
 """
-    gini{T}(v1::AbstractVector{T}, v2::AbstractVector{T})
+    gini(v1::AbstractVector{T}, v2::AbstractVector{T}) where T
 
 Returns the gini impurity of v1 and v2 weighted by number of elements.
 """
-function gini{T}(v1::AbstractVector{T}, v2::AbstractVector{T})
+function gini(v1::AbstractVector{T}, v2::AbstractVector{T}) where T
     N1, N2 = length(v1), length(v2)
     return (N1*gini(v1) + N2*gini(v2)) / (N1+N2)
 end
 """
-    gini{T}(v::AbstractVector{T})
+    gini(v::AbstractVector{T}) where T
 
 Returns the Gini impurity of v.  Returns 0.0 if empty.
 """
-function gini{T}(v::AbstractVector{T})
+function gini(v::AbstractVector{T}) where T
     isempty(v) && return 0.0
     return 1.0 - sum(abs2, proportions(v))
 end
@@ -295,23 +295,23 @@ function Base.display(model::GBDT; kwargs...)
     display(model.tree, model.catdisc; kwargs...)
 end
 """
-    Base.display(root::GBDTNode, catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}();
+    Base.display(root::GBDTNode, catdisc::Uniont{Nothing,CategoricalDiscretizer}=nothing;
                      edgelabels::Bool=false)
 
 Returns a TikzGraphs plot of the tree.  Turn off edgelabels for cleaner plot.  Left branch is true, right branch is false.
 If catdisc is supplied, use it to decode the labels.
 """
-function Base.display(root::GBDTNode, catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}();
+function Base.display(root::GBDTNode, catdisc::Union{Nothing,CategoricalDiscretizer}=nothing;
                      edgelabels::Bool=false)
     n_nodes = length(root)
     g = DiGraph(n_nodes)
     text_labels, edge_labels = Vector{String}(n_nodes), Dict{Tuple{Int,Int},String}() 
     for node in PreOrderDFS(root)
-        if !isnull(node.gbes_result)
-            r = get(node.gbes_result)
+        if node.gbes_result != nothing
+            r = node.gbes_result
             text_labels[node.id] = string("$(node.id): $(verbatim(string(r.expr)))")
         else
-            label = !isnull(catdisc) ?  decode(get(catdisc), node.label) : node.label
+            label = catdisc != nothing ?  decode(catdisc, node.label) : node.label
             text_labels[node.id] = string("$(node.id): label=$(label)")
         end
         for (i, ch) in enumerate(node.children)
@@ -331,71 +331,71 @@ function verbatim(s::String)
 end
 
 """
-    classify{T}(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}, 
-                     eval_module::Module=Main)
+    classify(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}, 
+                     eval_module::Module=Main) where T
 
 Predict classification label of each member using GBDT model.  Evaluate expressions in eval_module.
 """
-function classify{T}(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
-                     eval_module::Module=Main)
+function classify(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
+                     eval_module::Module=Main) where T
     classify(model.tree, X, members, eval_module; catdisc=model.catdisc)
 end
 """
-    classify{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, eval_module::Module=Main;
-                     catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}())
+    classify(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, eval_module::Module=Main;
+                     catdisc::Union{Nothing,CategoricalDiscretizer}=nothing) where T
 
 Predict classification label of each member using GBDT tree.  Evaluate expressions in eval_module.  If catdisc is available, use discretizer to decode labels.
 """
-function classify{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
+function classify(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
                      eval_module::Module=Main; 
-                     catdisc::Nullable{CategoricalDiscretizer}=Nullable{CategoricalDiscretizer}())
-    y_pred = Vector{Int}(length(members))
+                     catdisc::Union{Nothing,CategoricalDiscretizer}=nothing) where T
+    y_pred = Vector{Int}(undef,length(members))
     for i in eachindex(members)
         @eval eval_module x=$(X[i])
         y_pred[i] = _classify(node, eval_module) 
     end
-    if isnull(catdisc)
+    if catdisc == nothing
         return y_pred
     else
-        return decode(get(catdisc), y_pred)
+        return decode(catdisc, y_pred)
     end
 end
 function _classify(node::GBDTNode, eval_module::Module)
     isleaf(node) && return node.label
 
-    ex = get(node.gbes_result).expr
-    ch =  eval(eval_module, ex) ? node.children[1] : node.children[2] 
+    ex = get_expr(node.gbes_result)
+    ch =  Core.eval(eval_module, ex) ? node.children[1] : node.children[2] 
     return _classify(ch, eval_module) 
 end
 
 """
-    node_members{T}(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}, 
-                      eval_module::Module=Main)
+    node_members(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}, 
+                      eval_module::Module=Main) where T
 
 Returns the members of each node in the tree.
 """
-function node_members{T}(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}, 
-                      eval_module::Module=Main)
+function node_members(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}, 
+                      eval_module::Module=Main) where T
     node_members(model.tree, X, members, eval_module)
 end
 """
-    node_members{t}(node::gbdtnode, x::abstractvector{t}, members::abstractvector{int}, 
-                      eval_module::module=main)
+    node_members(node::gbdtnode, x::abstractvector{t}, members::abstractvector{int}, 
+                      eval_module::module=main) where T
 
 returns the members of each node in the tree.
 """
-function node_members{T}(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, 
-                      eval_module::Module=Main)
-    mvec = Vector{Vector{Int}}(length(node))
+function node_members(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}, 
+                      eval_module::Module=Main) where T
+    mvec = Vector{Vector{Int}}(undef,length(node))
     _node_members!(mvec, node, X, members, eval_module)
     mvec
 end
-function _node_members!{T}(mvec::Vector{Vector{Int}}, node::GBDTNode, X::AbstractVector{T}, 
-                        members::AbstractVector{Int}, eval_module::Module)
+function _node_members!(mvec::Vector{Vector{Int}}, node::GBDTNode, X::AbstractVector{T}, 
+                        members::AbstractVector{Int}, eval_module::Module) where T
     mvec[node.id] = deepcopy(members)
     isleaf(node) && return
 
-    ex = get(node.gbes_result).expr
+    ex = get_expr(node.gbes_result)
     y_bool = partition(X, members, ex, eval_module)
     members_true, members_false = members_by_bool(members, y_bool)
     _node_members!(mvec, node.children[1], X, members_true, eval_module)
@@ -428,10 +428,6 @@ children_id(node::GBDTNode) = Int[c.id for c in children(node)]
 
 returns the expression of the node 
 """
-function ExprOptimization.get_expr(node::GBDTNode)
-    result = get(node.gbes_result, nothing)
-    get_expr(result)
-end
-ExprOptimization.get_expr(x::Void) = nothing
+ExprOptimization.get_expr(node::GBDTNode) = get_expr(node.gbes_result)
 
 end # module
