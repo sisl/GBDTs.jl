@@ -93,9 +93,9 @@ isleaf(node::GBDTNode) = isempty(node.children)
 AbstractTrees.children(node::GBDTNode) = node.children
 function AbstractTrees.printnode(io::IO, node::GBDTNode) 
     print(io, "$(node.id): label=$(node.label)")
-    if node.gbes_result != nothing
-        r = get(node.gbes_result)
-        print(io, ", loss=$(round(r.loss,2)), $(r.expr)")
+    r = node.gbes_result
+    if r != nothing
+        print(io, ", loss=$(round(r.loss;digits=2)), $(r.expr)")
     end
 end
 
@@ -183,21 +183,25 @@ function induce_tree(grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, X::Abst
     members = collect(1:length(y_truth))
     node_count = Counter(0)
     node = _split(node_count, grammar, typ, p, X, y_truth, members, max_depth, loss, eval_module,
-                 min_members_per_branch=min_members_per_branch, prevent_same_label=prevent_same_label)
+                 min_members_per_branch=min_members_per_branch, 
+                 prevent_same_label=prevent_same_label, verbose=verbose)
     return GBDT(node, catdisc)
 end
 function _split(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOptAlgorithm, 
-                       X::AbstractVector{T}, y_truth::AbstractVector{Int}, members::AbstractVector{Int}, 
+                       X::AbstractVector{T}, y_truth::AbstractVector{Int}, 
+                       members::AbstractVector{Int}, 
                        d::Int, loss::Function, eval_module::Module;
                        min_members_per_branch::Int=0,
-                       prevent_same_label::Bool=true) where T
+                       prevent_same_label::Bool=true,
+                       verbose::Bool=false) where T
     id = node_count.i += 1  #assign ids in preorder
     if d == 0 || ishomogeneous(y_truth[members])
         return GBDTNode(id, mode(y_truth[members]))
     end
 
     #gbes
-    gbes_result = optimize(p, grammar, typ, (node,grammar)->loss(node, grammar, X, y_truth, members, eval_module)) 
+    gbes_result = optimize(p, grammar, typ, (node,grammar)->loss(node, grammar, X, y_truth, 
+        members, eval_module); verbose=verbose) 
     y_bool = partition(X, members, gbes_result.expr, eval_module)
     members_true, members_false = members_by_bool(members, y_bool)
 
@@ -211,12 +215,16 @@ function _split(node_count::Counter, grammar::Grammar, typ::Symbol, p::ExprOptAl
         return GBDTNode(id, mode(y_truth[members]))
     end
 
-    child_true = _split(node_count, grammar, typ, p, X, y_truth, members_true, d-1, loss, eval_module;
-                       min_members_per_branch=min_members_per_branch,
-                       prevent_same_label=prevent_same_label)
-    child_false = _split(node_count, grammar, typ, p, X, y_truth, members_false, d-1, loss, eval_module;
-                       min_members_per_branch=min_members_per_branch,
-                       prevent_same_label=prevent_same_label)
+    child_true = _split(node_count, grammar, typ, p, X, y_truth, members_true, d-1, 
+        loss, eval_module;
+        min_members_per_branch=min_members_per_branch,
+        prevent_same_label=prevent_same_label, 
+        verbose=verbose)
+    child_false = _split(node_count, grammar, typ, p, X, y_truth, members_false, d-1, 
+        loss, eval_module;
+        min_members_per_branch=min_members_per_branch,
+        prevent_same_label=prevent_same_label, 
+        verbose=verbose)
 
     return GBDTNode(id, mode(y_truth[members]), gbes_result, [child_true, child_false])
 end
@@ -305,7 +313,7 @@ function Base.display(root::GBDTNode, catdisc::Union{Nothing,CategoricalDiscreti
                      edgelabels::Bool=false)
     n_nodes = length(root)
     g = DiGraph(n_nodes)
-    text_labels, edge_labels = Vector{String}(n_nodes), Dict{Tuple{Int,Int},String}() 
+    text_labels, edge_labels = Vector{String}(undef,n_nodes), Dict{Tuple{Int,Int},String}() 
     for node in PreOrderDFS(root)
         if node.gbes_result != nothing
             r = node.gbes_result
@@ -327,7 +335,7 @@ function Base.display(root::GBDTNode, catdisc::Union{Nothing,CategoricalDiscreti
 end
 #Stay in text mode, escape some latex characters
 function verbatim(s::String)
-    s = replace(s, "_", "\\_")
+    s = replace(s, "_"=>"\\_")
 end
 
 """
@@ -336,8 +344,10 @@ end
 
 Predict classification label of each member using GBDT model.  Evaluate expressions in eval_module.
 """
-function classify(model::GBDT, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
-                     eval_module::Module=Main) where T
+function classify(model::GBDT, X::AbstractVector{T}, 
+    members::AbstractVector{Int}=collect(1:length(X)), 
+    eval_module::Module=Main) where T
+
     classify(model.tree, X, members, eval_module; catdisc=model.catdisc)
 end
 """
@@ -346,9 +356,11 @@ end
 
 Predict classification label of each member using GBDT tree.  Evaluate expressions in eval_module.  If catdisc is available, use discretizer to decode labels.
 """
-function classify(node::GBDTNode, X::AbstractVector{T}, members::AbstractVector{Int}=collect(1:length(X)), 
-                     eval_module::Module=Main; 
-                     catdisc::Union{Nothing,CategoricalDiscretizer}=nothing) where T
+function classify(node::GBDTNode, X::AbstractVector{T}, 
+    members::AbstractVector{Int}=collect(1:length(X)), 
+    eval_module::Module=Main; 
+    catdisc::Union{Nothing,CategoricalDiscretizer}=nothing) where T
+
     y_pred = Vector{Int}(undef,length(members))
     for i in eachindex(members)
         @eval eval_module x=$(X[i])
