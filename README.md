@@ -15,6 +15,6 @@ Please see the [example notebook](http://nbviewer.ipython.org/github/sisl/GBDTs.
 
 ## Maintainers:
 
-* Ritchie Lee, ritchie.lee@sv.cmu.edu
+* Ritchie Lee, ritchie@ritchielee.net 
 
 [![Build Status](https://travis-ci.org/sisl/GBDTs.jl.svg?branch=master)](https://travis-ci.org/sisl/GBDTs.jl) [![Coverage Status](https://coveralls.io/repos/sisl/GBDTs.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/sisl/GBDTs.jl?branch=master)
