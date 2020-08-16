@@ -1,0 +1,23 @@
+name = "GBDTs"
+uuid = "89ab3bad-2dab-5def-9792-cf4794d9d102"
+
+[deps]
+AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+Discretizers = "6e83dbb3-75ca-525b-8ae2-3751f0dd50b4"
+ExprOptimization = "0d84ce59-e78b-5c9a-b954-3a5400d7f6ed"
+ExprRules = "e7058ba0-a568-556c-b31a-209ee9d855a8"
+LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+TikzGraphs = "b4f28e30-c73f-5eaf-a395-8a9db949a742"
+
+[compat]
+TikzGraphs = "≥ 0.5.1"
+julia = "≥ 1.0"
+
+[extras]
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test", "Random"]
