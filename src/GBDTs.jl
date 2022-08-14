@@ -25,7 +25,7 @@ export
 using Discretizers
 using Reexport
 using StatsBase
-using TikzGraphs, LightGraphs
+using TikzGraphs, Graphs
 @reexport using AbstractTrees
 @reexport using ExprRules
 @reexport using ExprOptimization
